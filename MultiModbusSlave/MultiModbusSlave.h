@@ -1,11 +1,23 @@
 #ifndef MULTI_MODBUS_SLAVE_H
 #define MULTI_MODBUS_SLAVE_H
 
-// SimpleModbusSlaveV10
+
 
 /*
- SimpleModbusSlave allows you to communicate
- to any slave using the Modbus RTU protocol.
+ The multislave SoftwareSerial allows you to communicate
+ to any slave using the Modbus RTU protocol at the same time allowing you to host multiple slaves on a single device.
+ New modifications include object based code.
+ Host multiple slaves (2) in a single device.
+ software SoftwareSerial implementation of slave.
+ 
+ Tested on Arduino Mega 2560 adn ESP 12-E.
+ Thus can act as a hybrid modbus device (gateway) reading modbus data from one device and serving to another device.
+ V1.0 completed on 20/08/2018 by Divyanshu Anand
+ Credits:
+ Based on SimpleModbusSlave  library by Juan Bester
+ The crc calculation is based on the work published 
+ by jpmzometa at 
+ http://sites.google.com/site/jpmzometa/arduino-mbrt
  
  This implementation DOES NOT fully comply with the Modbus specifications.
  
@@ -14,7 +26,7 @@
  inter character time out and frame time out by incorporating a maximum
  time out allowable when reading from the message stream.
  
- SimpleModbusSlave implements an unsigned int return value on a call to modbus_update().
+ MultiModbusSlave implements an unsigned int return value on a call to modbus_update().
  This value is the total error count since the slave started. It's useful for fault finding.
  
  This code is for a Modbus slave implementing functions 3, 6 and 16
