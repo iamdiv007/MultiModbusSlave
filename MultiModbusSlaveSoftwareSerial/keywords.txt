@@ -1,0 +1,2 @@
+modbus_slaveconfigure KEYWORD2
+modbus_slaveupdate	 KEYWORD2

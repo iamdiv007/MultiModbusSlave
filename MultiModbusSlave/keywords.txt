@@ -1,0 +1,3 @@
+MultiModbusSlave KEYWORD1 modbus_slaveconfigure	KEYWORD2 
+modbus_slaveupdate	KEYWORD2 
+modbus_update_comms	KEYWORD2
