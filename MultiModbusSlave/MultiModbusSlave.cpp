@@ -1,11 +1,13 @@
+// Updated on 31/12/2018
+// fixed major bugs include network RS485 incomptibility issues
+// Updated intercharacter delay and interframe delay as per standard modbus specs of 11 char instead of 10 chars
 #include "MultiModbusSlave.h"
 #include "HardwareSerial.h"
 
-// SimpleModbusSlaveV10
+// based on SimpleModbusSlaveV10
 
 // Slaveframe[] is used to recieve and transmit packages. 
 HardwareSerial* ModbusSlavePort;
-
 
 void MultiModbusSlave::modbus_slaveconfigure(HardwareSerial *SerialPort,
                                                     long baud,
@@ -48,32 +50,38 @@ void MultiModbusSlave::modbus_update_comms(long baud, unsigned char _slaveID, un
 		T3_5 = 1750; 
 	}
 	else 
-	{
-		SlaveT1_5 = 15000000/baud; // 1T * 1.5 = T1.5
-		T3_5 = 35000000/baud; // 1T * 3.5 = T3.5
+	{ 
+		// 11 characters is the modbus standard for a packet sizze , adjust interchar and frame delay accordingly
+		//SlaveT1_5 = 15000000/baud; // 1T * 1.5 = T1.5
+		SlaveT1_5 = 16500000/baud;
+		//T3_5 = 35000000/baud; // 1T * 3.5 = T3.5//
+		T3_5 = 38500000/baud;
+		
+
 	}
 }  
 
 unsigned int MultiModbusSlave::modbus_slaveupdate()
 {
+	
   if ((*ModbusSlavePort).available())
   {
-	  unsigned char buffer = 0;
+	  unsigned char Sbuffer = 0;
 	  unsigned char overflow = 0;
 	
 	  while ((*ModbusSlavePort).available())
 	  {
-		  // If more bytes is received than the BUFFER_SIZE the overflow flag will be set and the 
+		  // If more bytes is received than the SlaveBUFFER_SIZE the overflow flag will be set and the 
 		  // serial buffer will be red untill all the data is cleared from the receive buffer.
 		  delay(0);
 		  if (overflow) 
 			  (*ModbusSlavePort).read();
 		  else
 		  {
-			  if (buffer == BUFFER_SIZE)
+			  if (Sbuffer == SlaveBUFFER_SIZE)
 				  overflow = 1;
-			  Slaveframe[buffer] = (*ModbusSlavePort).read();
-			  buffer++;
+			  Slaveframe[Sbuffer] = (*ModbusSlavePort).read();
+			  Sbuffer++;
 		  }
 		  delayMicroseconds(SlaveT1_5); // inter character time out
 	  }
@@ -82,10 +90,12 @@ unsigned int MultiModbusSlave::modbus_slaveupdate()
 	  // variable and return to the main sketch without 
 	  // responding to the request i.e. force a timeout
 	  if (overflow)
-		  return SlaveerrorCount++;
+	  	{	//Serial.println("Overflow in reading buffer");
+			  return SlaveerrorCount++;
+		  }
 	
 	  // The minimum request packet is 8 bytes for Slavefunction 3 & 16
-    if (buffer > 7) 
+    if (Sbuffer > 7) 
 	  {
 		  unsigned char id = Slaveframe[0];
 		
@@ -94,10 +104,10 @@ unsigned int MultiModbusSlave::modbus_slaveupdate()
 		  if (id == 0)
 			  SlavebroadcastFlag = 1;
 		
-      if (id == slaveID || slaveID2 || SlavebroadcastFlag) // if the recieved ID matches the slaveID or broadcasting id (0), continue
+      if (id == slaveID || id == slaveID2 || SlavebroadcastFlag) // if the recieved ID matches the slaveID or broadcasting id (0), continue
       {
-        unsigned int crc = ((Slaveframe[buffer - 2] << 8) | Slaveframe[buffer - 1]); // combine the crc Low & High bytes
-        if (SlavecalculateCRC(buffer - 2) == crc) // if the calculated crc matches the recieved crc continue
+        unsigned int crc = ((Slaveframe[Sbuffer - 2] << 8) | Slaveframe[Sbuffer - 1]); // combine the crc Low & High bytes
+        if (SlavecalculateCRC(Sbuffer - 2) == crc) // if the calculated crc matches the recieved crc continue
         {
 				  Slavefunction = Slaveframe[1];
 				  unsigned int startingAddress = ((Slaveframe[2] << 8) | Slaveframe[3]); // combine the starting address bytes
@@ -126,33 +136,40 @@ unsigned int MultiModbusSlave::modbus_slaveupdate()
                                 {
                                     Slaveframe[0] = slaveID2;
                                 }
+								else 
+								{
+
+								}
                               //Slaveframe[0] = slaveID;
 							  Slaveframe[1] = Slavefunction;
 							  Slaveframe[2] = noOfBytes;
 							  address = 3; // PDU starts at the 4th byte
 							  unsigned int temp;
-							
+								
 							  for (index = startingAddress; index < maxData; index++)
 						  	{     
                                   if (id == slaveID)
                                     {
-                                    temp = Sregs[index];
+                                    	temp = Sregs[index];
                                     }
                                     else if (id == slaveID2)
                                     {
-                                    temp = Sregs2[index];
+                                    	temp = Sregs2[index];
                                     }
 								  //temp = Sregs[index];
+								 
 								  Slaveframe[address] = temp >> 8; // split the register into 2 bytes
 								  address++;
 								  Slaveframe[address] = temp & 0xFF;
 								  address++;
-							  }	
-							
+							}	
+
 							  crc16 = SlavecalculateCRC(responseFrameSize - 2);
 							  Slaveframe[responseFrameSize - 2] = crc16 >> 8; // split crc into 2 bytes
 							  Slaveframe[responseFrameSize - 1] = crc16 & 0xFF;
 							  SlavesendPacket(responseFrameSize);
+
+							   
 						  }
 						  else	
 							  exceptionResponse(3); // exception 3 ILLEGAL DATA VALUE
@@ -194,7 +211,7 @@ unsigned int MultiModbusSlave::modbus_slaveupdate()
             // minus the request bytes.
 					  // id + Slavefunction + (2 * address bytes) + (2 * no of register bytes) + 
             // byte count + (2 * CRC bytes) = 9 bytes
-					  if (Slaveframe[6] == (buffer - 9)) 
+					  if (Slaveframe[6] == (Sbuffer - 9)) 
 					  {
 						  if (startingAddress < holdingRegsSize) // check exception 2 ILLEGAL DATA ADDRESS
 						  {
@@ -243,11 +260,18 @@ unsigned int MultiModbusSlave::modbus_slaveupdate()
 					  exceptionResponse(1); // exception 1 ILLEGAL Slavefunction
         }
 			  else // checksum failed
-				  SlaveerrorCount++;
+				{
+				//	SlaveerrorCount++;
+				//	Serial.println("Failed checksum");
+				}  
       } // incorrect id
     }
-	  else if (buffer > 0 && buffer < 8)
-		  SlaveerrorCount++; // corrupted packet
+	  else if (Sbuffer > 0 && Sbuffer < 8)
+			{
+			//	SlaveerrorCount++; // corrupted packet
+			//	Serial.println("Sbuffer > 0 && Sbuffer < 8");
+			}
+		  
   }
 	return SlaveerrorCount;
 }	
@@ -281,26 +305,26 @@ void MultiModbusSlave::exceptionResponse(unsigned char exception)
 
 unsigned int MultiModbusSlave::SlavecalculateCRC(unsigned char bufferSize) 
 {
-  unsigned int temp, temp2, flag;
-  temp = 0xFFFF;
+  unsigned int temp1, temp2, flag;
+  temp1 = 0xFFFF;
   for (unsigned char i = 0; i < bufferSize; i++)
   {
-    temp = temp ^ Slaveframe[i];
+    temp1 = temp1 ^ Slaveframe[i];
     for (unsigned char j = 1; j <= 8; j++)
     {
-      flag = temp & 0x0001;
-      temp >>= 1;
+      flag = temp1 & 0x0001;
+      temp1 >>= 1;
       if (flag)
-        temp ^= 0xA001;
+        temp1 ^= 0xA001;
     }
   }
   // Reverse byte order. 
-  temp2 = temp >> 8;
-  temp = (temp << 8) | temp2;
-  temp &= 0xFFFF; 
+  temp2 = temp1 >> 8;
+  temp1 = (temp1 << 8) | temp2;
+  temp1 &= 0xFFFF; 
   // the returned value is already swapped
   // crcLo byte is first & crcHi byte is last
-  return temp; 
+  return temp1; 
 }
 
 void MultiModbusSlave::SlavesendPacket(unsigned char bufferSize)

@@ -49,7 +49,7 @@ unsigned int MultiModbusSlaveSS::modbus_slaveupdate(unsigned int *holdingRegs,un
     if (id == 0)
       SlavebroadcastFlag = 1;
     
-    if (id == slaveID || slaveID2 || SlavebroadcastFlag ) // if the recieved ID matches the slaveID or broadcasting id (0), continue
+    if (id == slaveID || id == slaveID2 || SlavebroadcastFlag ) // if the recieved ID matches the slaveID or broadcasting id (0), continue
     {
       unsigned int crc = ((Slaveframe[buffer - 2] << 8) | Slaveframe[buffer - 1]); // combine the crc Low & High bytes
       if (SlavecalculateCRC(buffer - 2) == crc) // if the calculated crc matches the recieved crc continue

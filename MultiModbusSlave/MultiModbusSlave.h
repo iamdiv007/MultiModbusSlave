@@ -1,23 +1,11 @@
 #ifndef MULTI_MODBUS_SLAVE_H
 #define MULTI_MODBUS_SLAVE_H
 
-
+// SimpleModbusSlaveV10
 
 /*
- The multislave SoftwareSerial allows you to communicate
- to any slave using the Modbus RTU protocol at the same time allowing you to host multiple slaves on a single device.
- New modifications include object based code.
- Host multiple slaves (2) in a single device.
- software SoftwareSerial implementation of slave.
- 
- Tested on Arduino Mega 2560 adn ESP 12-E.
- Thus can act as a hybrid modbus device (gateway) reading modbus data from one device and serving to another device.
- V1.0 completed on 20/08/2018 by Divyanshu Anand
- Credits:
- Based on SimpleModbusSlave  library by Juan Bester
- The crc calculation is based on the work published 
- by jpmzometa at 
- http://sites.google.com/site/jpmzometa/arduino-mbrt
+ SimpleModbusSlave allows you to communicate
+ to any slave using the Modbus RTU protocol.
  
  This implementation DOES NOT fully comply with the Modbus specifications.
  
@@ -26,7 +14,7 @@
  inter character time out and frame time out by incorporating a maximum
  time out allowable when reading from the message stream.
  
- MultiModbusSlave implements an unsigned int return value on a call to modbus_update().
+ SimpleModbusSlave implements an unsigned int return value on a call to modbus_update().
  This value is the total error count since the slave started. It's useful for fault finding.
  
  This code is for a Modbus slave implementing functions 3, 6 and 16
@@ -63,7 +51,7 @@
 */
 
 #include "Arduino.h"
-#define BUFFER_SIZE 64
+#define SlaveBUFFER_SIZE 64
 
 class MultiModbusSlave
 {
@@ -78,6 +66,7 @@ class MultiModbusSlave
                             unsigned char _TxEnablePin, 
                             unsigned int _holdingRegsSize,
                             unsigned int* _regs,unsigned int* _regs2);
+        unsigned int SlaveerrorCount;
     private:
         
         // Slavefunction definitions
@@ -87,7 +76,7 @@ class MultiModbusSlave
 
         // Slaveframe[] is used to recieve and transmit packages. 
         // Variables 
-        unsigned char Slaveframe[BUFFER_SIZE];
+        unsigned char Slaveframe[SlaveBUFFER_SIZE];
         unsigned int holdingRegsSize; // size of the register array
         unsigned int* Sregs;
         unsigned int* Sregs2; // user array address
@@ -96,7 +85,7 @@ class MultiModbusSlave
         unsigned char slaveID2;
         unsigned char Slavefunction;
         unsigned char SlaveTxEnablePin;
-        unsigned int SlaveerrorCount;
+       // unsigned int SlaveerrorCount;
         unsigned int SlaveT1_5; // inter character time out
         unsigned int T3_5; // Slaveframe delay
 };
